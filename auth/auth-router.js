@@ -1,51 +1,63 @@
-const express = require("express")
-const bcrypt = require("bcryptjs")
-const Users = require("../users/users-model")
-const restrict = require("../middleware/restrict")
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Users = require("../users/users-model");
+const restrict = require("../middleware/restrict");
 
-const router = express.Router()
+const router = express.Router();
 
 router.post("/register", async (req, res, next) => {
-	try {
-		const { username } = req.body
-		const user = await Users.findBy({ username }).first()
+  try {
+    const { username } = req.body;
+    const user = await Users.findBy({ username }).first();
 
-		if (user) {
-			return res.status(409).json({
-				message: "Username is already taken",
-			})
-		}
+    if (user) {
+      return res.status(409).json({
+        message: "Username is already taken",
+      });
+    }
 
-		res.status(201).json(await Users.add(req.body))
-	} catch(err) {
-		next(err)
-	}
-})
+    res.status(201).json(await Users.add(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.post("/login", async (req, res, next) => {
-	const authError = {
-		message: "Invalid Credentials",
-	}
+  const authError = {
+    message: "Invalid Credentials",
+  };
 
-	try {
-		const { username, password } = req.body
+  try {
+    const { username, password } = req.body;
 
-		const user = await Users.findBy({ username }).first()
-		if (!user) {
-			return res.status(401).json(authError)
-		}
+    const user = await Users.findBy({ username }).first();
+    if (!user) {
+      return res.status(401).json(authError);
+    }
 
-		const passwordValid = await bcrypt.compare(password, user.password)
-		if (!passwordValid) {
-			return res.status(401).json(authError)
-		}
+    const passwordValid = await bcrypt.compare(password, user.password);
+    if (!passwordValid) {
+      return res.status(401).json(authError);
+    }
 
-		res.json({
-			message: `Welcome ${user.username}!`,
-		})
-	} catch(err) {
-		next(err)
-	}
-})
+    const payload = {
+      userId: user.id,
+      userRole: "normal", // this would normally come from a database
+    };
 
-module.exports = router
+    // generate a new JWT
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
+
+    // sends a Set-Cookie header with the value of the token
+    res.cookie("token", token);
+
+    res.json({
+      message: `Welcome ${user.username}!`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

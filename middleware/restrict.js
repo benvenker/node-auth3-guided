@@ -1,6 +1,4 @@
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const Users = require("../users/users-model");
 
 function restrict() {
   const authError = {
@@ -9,7 +7,7 @@ function restrict() {
 
   return async (req, res, next) => {
     try {
-      const token = req.headers.authorization;
+      const { token } = req.cookies;
       if (!token) {
         return res.status(401).json(authError);
       }
